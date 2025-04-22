@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Mobile-Friendly Photobooth</title>
+  <title>Mirrored Front Camera Photobooth</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -16,6 +16,9 @@
       border: 2px solid #ccc;
       border-radius: 10px;
       margin-bottom: 10px;
+    }
+    video {
+      transform: scaleX(-1); /* 👈 Mirror the live preview */
     }
     button {
       padding: 10px 20px;
@@ -64,13 +67,12 @@
 
     let countdown = 3;
     let countdownInterval;
-    
-    // Initialize the camera
-    // Initialize the camera (rear-facing)
+
+    // Initialize the front camera
     async function initCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: "environment" } }, // Rear camera
+          video: { facingMode: "user" },
           audio: false
         });
         video.srcObject = stream;
@@ -80,36 +82,41 @@
       }
     }
 
-
-    // Countdown before capturing photo
+    // Start countdown before capturing photo
     function startCountdown() {
+      countdown = 3;
       capture.disabled = true;
       timerDisplay.style.display = 'block';
+      timerDisplay.textContent = countdown;
       countdownInterval = setInterval(() => {
-        timerDisplay.textContent = countdown;
         countdown--;
-        if (countdown < 0) {
+        timerDisplay.textContent = countdown;
+        if (countdown <= 0) {
           clearInterval(countdownInterval);
           takePhoto();
         }
       }, 1000);
     }
 
-    // Capture photo
+    // Capture and mirror photo
     function takePhoto() {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
+
+      // Mirror the photo like the video
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       const imageData = canvas.toDataURL('image/png');
       preview.src = imageData;
 
-      // Show the Retake and Download buttons
       retake.style.display = 'inline-block';
       download.style.display = 'inline-block';
       capture.style.display = 'none';
       timerDisplay.style.display = 'none';
+      capture.disabled = false;
     }
 
     // Retake the photo
@@ -118,7 +125,7 @@
       capture.style.display = 'inline-block';
       retake.style.display = 'none';
       download.style.display = 'none';
-      startCountdown();  // Start the countdown again
+      startCountdown();
     });
 
     // Download the photo
@@ -130,10 +137,10 @@
       link.click();
     });
 
-    // Start countdown on button click
+    // Start countdown on click
     capture.addEventListener('click', startCountdown);
 
-    // Initialize camera on page load
+    // Start camera
     initCamera();
   </script>
 </body>
