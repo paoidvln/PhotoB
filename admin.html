@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <style>
+    .gallery { display: flex; flex-wrap: wrap; gap: 10px; }
+    .card { width: 200px; border: 1px solid #ccc; padding: 10px; border-radius: 8px; text-align: center; }
+    img { width: 100%; border-radius: 8px; }
+    .timestamp { font-size: 12px; color: gray; margin: 5px 0; }
+    button { padding: 5px 10px; }
+  </style>
+</head>
+<body>
+  <h2>📁 Uploaded Photos</h2>
+  <div class="gallery" id="gallery"></div>
+
+  <script>
+    fetch('get_photos.php')
+      .then(res => res.json())
+      .then(photos => {
+        const gallery = document.getElementById('gallery');
+        photos.forEach(photo => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <img src="${photo.filename}" />
+            <div class="timestamp">${photo.uploaded_at}</div>
+            <button onclick="deletePhoto('${photo.id}', this)">Delete</button>
+          `;
+          gallery.appendChild(card);
+        });
+      });
+
+    function deletePhoto(id, btn) {
+      fetch('delete_photo.php?id=' + id)
+        .then(res => res.text())
+        .then(res => {
+          btn.parentElement.remove();
+          alert(res);
+        });
+    }
+  </script>
+</body>
+</html>
