@@ -2,146 +2,78 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Mirrored Front Camera Photobooth</title>
+  <title>Photobooth</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    video, canvas, img {
-      width: 100%;
-      max-width: 400px;
-      border: 2px solid #ccc;
-      border-radius: 10px;
-      margin-bottom: 10px;
-    }
-    video {
-      transform: scaleX(-1); /* 👈 Mirror the live preview */
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 18px;
-      border: none;
-      background-color: #007bff;
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .error {
-      color: red;
-      font-weight: bold;
-    }
-    #timer {
-      font-size: 30px;
-      color: red;
-      font-weight: bold;
-    }
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    video, canvas, img { width: 100%; max-width: 400px; border-radius: 10px; }
+    button { padding: 10px 20px; margin: 5px; }
+    #timer { font-size: 2em; color: red; }
   </style>
 </head>
 <body>
-  <h2>📸 Photobooth</h2>
-  <video id="video" autoplay playsinline></video>
-  <br>
-  <button id="capture">Capture Photo</button>
-  <button id="retake" style="display:none;">Retake Photo</button>
-  <button id="download" style="display:none;">Download Photo</button>
-  <p id="timer" style="display:none;">3</p>
+  <h2>📷 Take a Selfie</h2>
+  <video id="video" autoplay playsinline style="transform: scaleX(-1);"></video>
   <canvas id="canvas" style="display:none;"></canvas>
-  <img id="preview" alt="Captured photo will appear here">
-  <p id="error" class="error"></p>
+  <img id="preview" style="display:none;" />
+  <div>
+    <button id="startBtn">Capture</button>
+    <button id="uploadBtn" style="display:none;">Upload</button>
+    <button id="retakeBtn" style="display:none;">Retake</button>
+  </div>
+  <p id="timer" style="display:none;">3</p>
+  <p id="msg"></p>
 
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const preview = document.getElementById('preview');
-    const capture = document.getElementById('capture');
-    const retake = document.getElementById('retake');
-    const download = document.getElementById('download');
-    const timerDisplay = document.getElementById('timer');
-    const errorMsg = document.getElementById('error');
+    const msg = document.getElementById('msg');
 
-    let countdown = 3;
-    let countdownInterval;
-
-    // Initialize the front camera
     async function initCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
         video.srcObject = stream;
       } catch (err) {
-        errorMsg.textContent = "Camera access denied or not available: " + err.message;
-        console.error(err);
+        msg.textContent = "Camera access denied: " + err.message;
       }
     }
 
-    // Start countdown before capturing photo
-    function startCountdown() {
-      countdown = 3;
-      capture.disabled = true;
-      timerDisplay.style.display = 'block';
-      timerDisplay.textContent = countdown;
-      countdownInterval = setInterval(() => {
-        countdown--;
-        timerDisplay.textContent = countdown;
-        if (countdown <= 0) {
-          clearInterval(countdownInterval);
-          takePhoto();
-        }
-      }, 1000);
-    }
+    initCamera();
 
-    // Capture and mirror photo
-    function takePhoto() {
+    document.getElementById('startBtn').onclick = () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      const context = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0);
+      const data = canvas.toDataURL('image/png');
+      preview.src = data;
+      preview.style.display = 'block';
+      document.getElementById('uploadBtn').style.display = 'inline-block';
+      document.getElementById('retakeBtn').style.display = 'inline-block';
+      document.getElementById('startBtn').style.display = 'none';
+    };
 
-      // Mirror the photo like the video
-      context.translate(canvas.width, 0);
-      context.scale(-1, 1);
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    document.getElementById('retakeBtn').onclick = () => {
+      preview.style.display = 'none';
+      document.getElementById('uploadBtn').style.display = 'none';
+      document.getElementById('retakeBtn').style.display = 'none';
+      document.getElementById('startBtn').style.display = 'inline-block';
+    };
 
-      const imageData = canvas.toDataURL('image/png');
-      preview.src = imageData;
-
-      retake.style.display = 'inline-block';
-      download.style.display = 'inline-block';
-      capture.style.display = 'none';
-      timerDisplay.style.display = 'none';
-      capture.disabled = false;
-    }
-
-    // Retake the photo
-    retake.addEventListener('click', () => {
-      preview.src = '';
-      capture.style.display = 'inline-block';
-      retake.style.display = 'none';
-      download.style.display = 'none';
-      startCountdown();
-    });
-
-    // Download the photo
-    download.addEventListener('click', () => {
-      const image = preview.src;
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = 'photobooth-image.png';
-      link.click();
-    });
-
-    // Start countdown on click
-    capture.addEventListener('click', startCountdown);
-
-    // Start camera
-    initCamera();
+    document.getElementById('uploadBtn').onclick = () => {
+      const imageData = preview.src;
+      msg.textContent = 'Uploading...';
+      fetch('upload.php', {
+        method: 'POST',
+        body: JSON.stringify({ image: imageData }),
+        headers: { 'Content-Type': 'application/json' }
+      }).then(res => res.text())
+        .then(res => msg.textContent = res)
+        .catch(err => msg.textContent = 'Upload failed: ' + err);
+    };
   </script>
 </body>
 </html>
