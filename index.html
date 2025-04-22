@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mobile-Friendly Photobooth</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    video, canvas, img {
+      width: 100%;
+      max-width: 400px;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    #timer {
+      font-size: 30px;
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>📸 Photobooth</h2>
+  <video id="video" autoplay playsinline></video>
+  <br>
+  <button id="capture">Capture Photo</button>
+  <button id="retake" style="display:none;">Retake Photo</button>
+  <button id="download" style="display:none;">Download Photo</button>
+  <p id="timer" style="display:none;">3</p>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <img id="preview" alt="Captured photo will appear here">
+  <p id="error" class="error"></p>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const preview = document.getElementById('preview');
+    const capture = document.getElementById('capture');
+    const retake = document.getElementById('retake');
+    const download = document.getElementById('download');
+    const timerDisplay = document.getElementById('timer');
+    const errorMsg = document.getElementById('error');
+
+    let countdown = 3;
+    let countdownInterval;
+    
+    // Initialize the camera
+    async function initCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" }, // "environment" for rear cam
+          audio: false
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        errorMsg.textContent = "Camera access denied or not available: " + err.message;
+        console.error(err);
+      }
+    }
+
+    // Countdown before capturing photo
+    function startCountdown() {
+      capture.disabled = true;
+      timerDisplay.style.display = 'block';
+      countdownInterval = setInterval(() => {
+        timerDisplay.textContent = countdown;
+        countdown--;
+        if (countdown < 0) {
+          clearInterval(countdownInterval);
+          takePhoto();
+        }
+      }, 1000);
+    }
+
+    // Capture photo
+    function takePhoto() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = canvas.toDataURL('image/png');
+      preview.src = imageData;
+
+      // Show the Retake and Download buttons
+      retake.style.display = 'inline-block';
+      download.style.display = 'inline-block';
+      capture.style.display = 'none';
+      timerDisplay.style.display = 'none';
+    }
+
+    // Retake the photo
+    retake.addEventListener('click', () => {
+      preview.src = '';
+      capture.style.display = 'inline-block';
+      retake.style.display = 'none';
+      download.style.display = 'none';
+      startCountdown();  // Start the countdown again
+    });
+
+    // Download the photo
+    download.addEventListener('click', () => {
+      const image = preview.src;
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = 'photobooth-image.png';
+      link.click();
+    });
+
+    // Start countdown on button click
+    capture.addEventListener('click', startCountdown);
+
+    // Initialize camera on page load
+    initCamera();
+  </script>
+</body>
+</html>
