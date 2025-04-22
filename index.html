@@ -66,10 +66,11 @@
     let countdownInterval;
     
     // Initialize the camera
+    // Initialize the camera (rear-facing)
     async function initCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" }, // "environment" for rear cam
+          video: { facingMode: { exact: "environment" } }, // Rear camera
           audio: false
         });
         video.srcObject = stream;
@@ -78,6 +79,7 @@
         console.error(err);
       }
     }
+
 
     // Countdown before capturing photo
     function startCountdown() {
